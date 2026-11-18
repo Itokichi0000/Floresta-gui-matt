@@ -45,7 +45,7 @@ export function scriptType(desc) {
 
 function friendlyError(err) {
   const msg = err?.message || "";
-  if (/InitialBlockDownload|syncing/i.test(msg)) return t("wallet.err.ibd");
+  if (/initial\s*block\s*download|syncing/i.test(msg)) return t("wallet.err.ibd");
   if (/InvalidDescriptor/i.test(msg)) return t("wallet.err.invalid");
   return errorText(err);
 }

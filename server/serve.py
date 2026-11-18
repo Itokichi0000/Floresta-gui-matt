@@ -18,8 +18,10 @@ import ipaddress
 import json
 import mimetypes
 import socket
+import webbrowser
 import sys
 import threading
+import time
 import urllib.error
 import urllib.request
 from http import HTTPStatus
@@ -29,7 +31,7 @@ from urllib.parse import unquote, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from config import VERSION, Config, ConfigError, load_config  # noqa: E402
+from config import NETWORKS, VERSION, Config, ConfigError, load_config  # noqa: E402
 
 # ----- RPC policy (design doc 4.1) -----------------------------------------
 
@@ -125,6 +127,7 @@ class Credentials:
         self._lock = threading.Lock()
         self._cached: str | None = None
         self._mtime: float | None = None
+        self._path = None
 
     @property
     def mode(self) -> str:
@@ -148,7 +151,8 @@ class Credentials:
                 # florestad removes the cookie on shutdown.
                 self._cached, self._mtime = None, None
                 return None
-            if force_reload or self._cached is None or mtime != self._mtime:
+            if force_reload or self._cached is None or mtime != self._mtime or path != self._path:
+                self._path = path
                 try:
                     text = path.read_text(encoding="utf-8").strip()
                 except (OSError, UnicodeDecodeError):
@@ -169,6 +173,49 @@ class FlorestadClient:
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         self._next_id = 0
         self._id_lock = threading.Lock()
+        self._detect_lock = threading.Lock()
+        self._last_detect = float("-inf")
+
+    # ----- network auto-detection ------------------------------------------
+
+    DETECT_INTERVAL = 5.0
+
+    def _candidates(self) -> list[str]:
+        """Networks to try: those with a cookie on disk first (newest first), then the rest."""
+        with_cookie = []
+        for name in NETWORKS:
+            try:
+                with_cookie.append((self.config.cookie_path_for(name).stat().st_mtime, name))
+            except OSError:
+                pass
+        ordered = [name for _, name in sorted(with_cookie, reverse=True)]
+        return ordered + [name for name in NETWORKS if name not in ordered]
+
+    def detect_network(self, force: bool = False) -> bool:
+        """Point the client at whichever network's florestad is listening.
+
+        Only used when FLORESTA_NETWORK and FLORESTAD_URL were not set.
+        Returns True if the target changed.
+        """
+        if not self.config.auto_network:
+            return False
+        with self._detect_lock:
+            now = time.monotonic()
+            if not force and now - self._last_detect < self.DETECT_INTERVAL:
+                return False
+            self._last_detect = now
+            for name in self._candidates():
+                port = NETWORKS[name].rpc_port
+                try:
+                    with socket.create_connection(("127.0.0.1", port), timeout=0.3):
+                        pass
+                except OSError:
+                    continue
+                url = f"http://127.0.0.1:{port}"
+                changed = (name, url) != (self.config.network, self.config.florestad_url)
+                self.config.network, self.config.florestad_url = name, url
+                return changed
+            return False
 
     def _request_id(self) -> int:
         with self._id_lock:
@@ -189,6 +236,15 @@ class FlorestadClient:
 
     def call(self, method: str, params: list | dict) -> dict:
         """Return {"result": ..., "error": ...} or raise RelayError."""
+        try:
+            return self._call(method, params)
+        except RelayError as exc:
+            # florestad may have been started on another network: look again.
+            if exc.code in ("node_unreachable", "auth_failed") and self.detect_network():
+                return self._call(method, params)
+            raise
+
+    def _call(self, method: str, params: list | dict) -> dict:
         timeout = SLOW_METHOD_TIMEOUTS.get(method, DEFAULT_TIMEOUT)
         body = json.dumps(
             {"jsonrpc": "2.0", "id": self._request_id(), "method": method, "params": params}
@@ -221,12 +277,16 @@ class FlorestadClient:
             else:
                 hint = "florestad rejected FLORESTA_RPC_USER / FLORESTA_RPC_PASSWORD."
             raise RelayError(HTTPStatus.BAD_GATEWAY, "auth_failed", hint)
-        if status == 503:
-            raise RelayError(HTTPStatus.SERVICE_UNAVAILABLE, "node_busy", "florestad is busy, try again.")
         try:
             doc = json.loads(raw) if raw else None
         except ValueError:
             doc = None
+        # florestad answers RPC errors with a matching HTTP status (400, 404,
+        # 503 while in IBD...) and a JSON-RPC error body: pass those through.
+        if isinstance(doc, dict) and doc.get("error") is not None:
+            return {"result": doc.get("result"), "error": doc["error"]}
+        if status == 503:
+            raise RelayError(HTTPStatus.SERVICE_UNAVAILABLE, "node_busy", "florestad is busy, try again.")
         if not isinstance(doc, dict) or ("result" not in doc and "error" not in doc):
             raise RelayError(HTTPStatus.BAD_GATEWAY, "bad_response", f"unexpected answer from florestad (HTTP {status})")
         return {"result": doc.get("result"), "error": doc.get("error")}
@@ -455,13 +515,49 @@ class Handler(BaseHTTPRequestHandler):
         self.send_bytes(HTTPStatus.OK, target.read_bytes(), content_type)
 
 
-def print_banner(config: Config, port: int) -> None:
+def ui_url(config: Config, port: int) -> str:
+    host = config.bind_host
+    if host in ("0.0.0.0", "::", ""):
+        host = "127.0.0.1"
+    if ":" in host:
+        host = f"[{host}]"
+    return f"http://{host}:{port}/"
+
+
+def node_status(server: "UIServer") -> str:
+    """One line about florestad, for the startup banner. Never contains secrets."""
+    try:
+        info = server.client.call("getblockchaininfo", [])
+    except RelayError as exc:
+        if exc.code == "node_unreachable":
+            if server.config.auto_network:
+                ports = ", ".join(str(n.rpc_port) for n in NETWORKS.values())
+                return f"no florestad found yet (looked on ports {ports}). Start it; the UI keeps looking."
+            return "not reachable yet. Start florestad; the UI keeps retrying. If it runs on another network, set FLORESTA_NETWORK."
+        return f"{exc.code}: {exc.message or ''}".strip()
+    result = info.get("result") or {}
+    if info.get("error") or not isinstance(result, dict):
+        return "answered with an error to getblockchaininfo"
+    blocks = result.get("blocks", result.get("validated", result.get("height")))
+    headers = result.get("headers", result.get("height"))
+    return f"connected ({result.get('chain', server.config.network)}, height {blocks:,} of {headers:,})" if isinstance(blocks, int) and isinstance(headers, int) else "connected"
+
+
+def print_banner(config: Config, port: int, status: str | None = None) -> None:
     out = sys.stderr
     out.write(f"floresta-ui {VERSION}\n")
-    out.write(f"  UI:        http://{config.bind_display.rsplit(':', 1)[0]}:{port}/\n")
-    out.write(f"  florestad: {config.florestad_url} (network: {config.network})\n")
+    out.write(f"  UI:        {ui_url(config, port)}\n")
+    if config.auto_network and status and status.startswith("no florestad"):
+        out.write("  florestad: any network (set FLORESTA_NETWORK to pick one)\n")
+    else:
+        detected = ", detected automatically" if config.auto_network else ""
+        out.write(f"  florestad: {config.florestad_url} (network: {config.network}{detected})\n")
+    if status:
+        out.write(f"  status:    {status}\n")
     if config.uses_password:
         out.write("  auth:      FLORESTA_RPC_USER / FLORESTA_RPC_PASSWORD\n")
+    elif config.auto_network and status and status.startswith("no florestad"):
+        out.write(f"  auth:      cookie under {config.datadir}\n")
     else:
         out.write(f"  auth:      cookie at {config.cookie_path}\n")
     if config.allow_dangerous:
@@ -485,7 +581,10 @@ def main(argv: list[str] | None = None) -> int:
     except OSError as exc:
         sys.stderr.write(f"error: cannot listen on {config.bind_display}: {exc.strerror or exc}\n")
         return 1
-    print_banner(config, server.port)
+    server.client.detect_network(force=True)
+    print_banner(config, server.port, node_status(server))
+    if config.open_browser:
+        threading.Timer(0.5, webbrowser.open, args=(ui_url(config, server.port),)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
