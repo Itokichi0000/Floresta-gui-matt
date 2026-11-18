@@ -4,7 +4,7 @@
 const ROUTES = [
   { name: "dashboard", pattern: /^\/?$/, load: () => import("./views/dashboard.js") },
   { name: "peers", pattern: /^\/peers\/?$/, load: () => import("./views/peers.js") },
-  { name: "forest", pattern: /^\/forest\/?$/, load: () => import("./views/placeholder.js") },
+  { name: "forest", pattern: /^\/forest\/?$/, load: () => import("./views/forest.js") },
   { name: "wallet", pattern: /^\/wallet\/?$/, load: () => import("./views/wallet.js") },
   { name: "block", pattern: /^\/block(?:\/([^/]+))?\/?$/, load: () => import("./views/block.js") },
 ];

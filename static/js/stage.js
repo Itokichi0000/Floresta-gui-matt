@@ -46,7 +46,7 @@ function cloud(x, y, s) {
 }
 
 /** One stylised tree. Outline circles first, then fills, so the canopy reads as one shape. */
-function tree(x, base, s, index) {
+export function tree(x, base, s, index) {
   const parts = [
     [x, base - 46 * s, 22 * s],
     [x - 15 * s, base - 32 * s, 15 * s],

@@ -174,5 +174,18 @@
   "wallet.rescan.summaryHeight": "Rescan blocks from height {start} to {stop}.",
   "wallet.rescan.summaryDate": "Rescan from {start} to {stop} with {conf} confidence.",
   "wallet.rescan.confirmTitle": "Start a rescan?",
-  "wallet.rescan.started": "Rescan started. florestad logs the blocks it finds for your wallet."
+  "wallet.rescan.started": "Rescan started. florestad logs the blocks it finds for your wallet.",
+  "forest.lead": "Floresta does not keep the UTXO set (every unspent coin). It keeps a Utreexo accumulator instead: a small forest of Merkle trees, of which it only remembers the roots. Peers send proofs along with each block.",
+  "forest.roots": "roots",
+  "forest.compare.lead": "That is all: {size} of tree tops.",
+  "forest.compare.body": "A regular full node keeps the whole UTXO set, several gigabytes (about 10 GB on mainnet). That is roughly {ratio}× more than this forest.",
+  "forest.asOf": "Forest at Lv. {height}, block",
+  "forest.panorama.aria": "{n} trees, one per Utreexo root",
+  "forest.scaleNote": "Trees are not to scale: getroots returns the root hashes but not the number of leaves, so only the number of trees is real.",
+  "forest.explain.1": "Each tree is a Merkle tree whose leaves are coins. When a coin is spent, its proof shows the path up to a root, so I can check it without the whole list!",
+  "forest.explain.2": "The number of trees follows the binary digits of the number of coins, which is why it goes up and down as blocks arrive.",
+  "forest.copyAll": "Copy all",
+  "forest.copyRoot": "Copy root #{i}",
+  "forest.rootAria": "Root {i}: {hash}",
+  "forest.empty": "The accumulator is empty."
 }
