@@ -193,6 +193,14 @@ class RelayTests(unittest.TestCase):
         self.assertIsNone(body["result"])
         self.assertEqual(body["error"]["code"], -8)
 
+    def test_ibd_error_with_503_is_an_rpc_error_not_busy(self):
+        # Real florestad answers 503 + a JSON-RPC error while syncing.
+        self.h.mock.node.headers += 100
+        status, body = self.h.rpc("rescanblockchain", [0, 0])
+        self.assertEqual(status, 200)
+        self.assertIsNone(body["result"])
+        self.assertEqual(body["error"]["code"], -21)
+
     def test_stop_is_forbidden_by_default(self):
         status, body = self.h.rpc("stop")
         self.assertEqual(status, 403)

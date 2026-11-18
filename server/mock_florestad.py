@@ -519,7 +519,7 @@ class MockNode:
         if "prv" in desc:
             raise RpcError(-20, "InvalidDescriptor: watch-only wallet, private keys are not allowed")
         if self.blocks < self.headers:
-            raise RpcError(-21, "InInitialBlockDownload")
+            raise RpcError(-21, "Node is in initial block download")
         body, _, given = desc.partition("#")
         checksum = descriptor_checksum(body)
         if checksum is None or (given and given != checksum):
@@ -533,7 +533,7 @@ class MockNode:
 
     def rpc_rescanblockchain(self, start=0, stop=0, use_timestamp=False, confidence="medium"):
         if self.blocks < self.headers:
-            raise RpcError(-21, "Node is still syncing")
+            raise RpcError(-21, "Node is in initial block download")
         if confidence not in ("high", "medium", "low", "exact"):
             raise RpcError(-8, "Invalid confidence")
         if not isinstance(start, int) or not isinstance(stop, int) or start < 0 or stop < 0:
@@ -655,8 +655,10 @@ class MockHandler(BaseHTTPRequestHandler):
             payload = {"jsonrpc": "2.0", "result": result, "error": None, "id": req_id}
             status = 200
         except RpcError as exc:
-            payload = {"jsonrpc": "2.0", "result": None, "error": {"code": exc.code, "message": exc.message}, "id": req_id}
-            status = 500
+            # Like florestad: the HTTP status follows the error (400 bad input,
+            # 404 not found, 503 while syncing) and the body has no "result".
+            payload = {"error": {"code": exc.code, "message": exc.message, "data": None}, "id": req_id}
+            status = 503 if exc.code == -21 else 404 if exc.code == -5 else 400 if exc.code in (-8, -20, -22, -30, -31, -32, -33) else 500
         except TypeError:
             payload = {"jsonrpc": "2.0", "result": None, "error": {"code": -32602, "message": "Invalid params"}, "id": req_id}
             status = 500

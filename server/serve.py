@@ -277,12 +277,16 @@ class FlorestadClient:
             else:
                 hint = "florestad rejected FLORESTA_RPC_USER / FLORESTA_RPC_PASSWORD."
             raise RelayError(HTTPStatus.BAD_GATEWAY, "auth_failed", hint)
-        if status == 503:
-            raise RelayError(HTTPStatus.SERVICE_UNAVAILABLE, "node_busy", "florestad is busy, try again.")
         try:
             doc = json.loads(raw) if raw else None
         except ValueError:
             doc = None
+        # florestad answers RPC errors with a matching HTTP status (400, 404,
+        # 503 while in IBD...) and a JSON-RPC error body: pass those through.
+        if isinstance(doc, dict) and doc.get("error") is not None:
+            return {"result": doc.get("result"), "error": doc["error"]}
+        if status == 503:
+            raise RelayError(HTTPStatus.SERVICE_UNAVAILABLE, "node_busy", "florestad is busy, try again.")
         if not isinstance(doc, dict) or ("result" not in doc and "error" not in doc):
             raise RelayError(HTTPStatus.BAD_GATEWAY, "bad_response", f"unexpected answer from florestad (HTTP {status})")
         return {"result": doc.get("result"), "error": doc.get("error")}

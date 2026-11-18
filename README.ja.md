@@ -131,6 +131,7 @@ Basic認証付きで転送します。cookieはブラウザ・ログ・エラー
 
 Florestaの `master`（Bitcoin Core互換のRPC名、cookie認証）を基準にしています。
 Docker Hubの `dlsz/floresta`（florestad 0.9.x、RPC認証なし）の古いフィールド名にも対応しています。
+master（コミット `421e62d`、cookie認証あり）からビルドしたflorestadと、`dlsz/floresta` 0.9.1 の両方で、signet上で動作確認しています。
 
 ## floresta-webuiとの関係
 

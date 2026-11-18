@@ -184,6 +184,9 @@ see [doc/rpc](https://github.com/getfloresta/Floresta/tree/master/doc/rpc)).
 It also understands the older field names of florestad 0.9.x, the version
 published as `dlsz/floresta` on Docker Hub, which has no RPC authentication.
 
+Tested against florestad built from `master` (commit `421e62d`, with cookie
+auth) and against `dlsz/floresta` 0.9.1, both on signet.
+
 ## Relationship with floresta-webui
 
 This project carries on the goals of Davidson Souza's
