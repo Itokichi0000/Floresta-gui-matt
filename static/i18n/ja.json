@@ -188,5 +188,7 @@
   "forest.copyRoot": "根 #{i} をコピー",
   "forest.rootAria": "根 {i}：{hash}",
   "forest.empty": "アキュムレータは空です。",
-  "controls.language": "言語"
+  "controls.language": "言語",
+  "controls.toLight": "昼の森（ライト）に切り替え",
+  "controls.toDark": "夜の森（ダーク）に切り替え"
 }

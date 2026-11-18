@@ -132,7 +132,7 @@
   border-radius: var(--radius-s);
   box-shadow: var(--shadow-s);
   background: var(--warn-bg);
-  color: var(--c-ink);
+  color: var(--text);
   margin-bottom: 22px;
 }
 .banner .icon { width: 26px; height: 26px; }
@@ -160,12 +160,6 @@
   transition: width .6s ease;
 }
 .exp-fill[data-full] { border-right: 0; }
-.exp-label {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-weight: 700; font-size: .8rem;
-  color: var(--c-ink);
-}
 
 /* ----- stat list / tiles ------------------------------------------------ */
 

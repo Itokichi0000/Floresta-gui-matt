@@ -188,5 +188,7 @@
   "forest.copyRoot": "Copy root #{i}",
   "forest.rootAria": "Root {i}: {hash}",
   "forest.empty": "The accumulator is empty.",
-  "controls.language": "Language"
+  "controls.language": "Language",
+  "controls.toLight": "Switch to the sunny forest (light)",
+  "controls.toDark": "Switch to the night forest (dark)"
 }

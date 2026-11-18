@@ -43,8 +43,9 @@ export function mount(root) {
   const lvValue = h("span", { class: "lv-value" }, "—");
   const syncBadge = h("span", { class: "badge" });
   const expFill = h("div", { class: "exp-fill" });
-  const expLabel = h("div", { class: "exp-label" }, "—");
+  const expLabel = h("span", { class: "exp-pct mono" }, "—");
   const nextEl = h("span", { class: "exp-next-value mono" }, "—");
+  const expBar = h("div", { class: "exp", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": t("dash.exp.tip") }, expFill);
   const sHeaders = stat("box", "dash.headers", "dash.headers.tip");
   const sUptime = stat("clock", "dash.uptime", "dash.uptime.tip");
   const sMemory = stat("memory-stick", "dash.memory", "dash.memory.tip");
@@ -59,9 +60,9 @@ export function mount(root) {
       syncBadge),
     h("div", { class: "exp-block" },
       h("div", { class: "exp-head" },
-        h("span", { class: "exp-title", title: t("dash.exp.tip") }, "SYNC EXP"),
+        h("span", { class: "exp-title", title: t("dash.exp.tip") }, "SYNC EXP ", expLabel),
         h("span", { class: "exp-next", title: t("dash.next.tip") }, "NEXT → ", nextEl)),
-      h("div", { class: "exp", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": t("dash.exp.tip") }, expFill, expLabel)),
+      expBar),
     h("div", { class: "stats" }, sHeaders.el, sUptime.el, sMemory.el, sDisk.el),
     h("div", { class: "latest", title: t("dash.latest.tip") },
       h("span", { class: "latest-label" }, icon("box"), t("dash.latest")),
@@ -152,7 +153,7 @@ export function mount(root) {
     if (pct >= 1) expFill.setAttribute("data-full", "");
     else expFill.removeAttribute("data-full");
     expLabel.textContent = formatPercent(pct);
-    expLabel.parentElement.setAttribute("aria-valuenow", (pct * 100).toFixed(2));
+    expBar.setAttribute("aria-valuenow", (pct * 100).toFixed(2));
     nextEl.textContent = t("dash.next.blocks", { n: formatNumber(Math.max(0, c.headers - c.blocks)) });
     sHeaders.value.textContent = formatNumber(c.headers);
     sHeaders.sub.textContent = t("dash.headers.sub", { n: formatNumber(c.blocks) });
