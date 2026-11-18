@@ -90,3 +90,17 @@
   .block-kv { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .block-kv dt { margin-top: 8px; }
 }
+
+/* ----- wallet --------------------------------------------------------- */
+.desc-list { display: flex; flex-direction: column; gap: 8px; }
+.desc-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px 6px 10px;
+  background: var(--paper-2); border: var(--border-thin) solid var(--line); border-radius: 12px;
+  min-width: 0;
+}
+.desc-type { flex: none; }
+.desc-text { flex: 1; min-width: 0; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-only { margin-bottom: 0; box-shadow: none; }
+fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset.plain legend { padding: 0; margin-bottom: 4px; width: 100%; }
