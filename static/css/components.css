@@ -169,7 +169,7 @@
 
 /* ----- stat list / tiles ------------------------------------------------ */
 
-.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
 .stat {
   padding: 10px 12px;
   background: var(--paper-2);

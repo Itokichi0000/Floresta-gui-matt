@@ -2,7 +2,7 @@
 // Reloading the page lands on the same screen.
 
 const ROUTES = [
-  { name: "dashboard", pattern: /^\/?$/, load: () => import("./views/placeholder.js") },
+  { name: "dashboard", pattern: /^\/?$/, load: () => import("./views/dashboard.js") },
   { name: "peers", pattern: /^\/peers\/?$/, load: () => import("./views/placeholder.js") },
   { name: "forest", pattern: /^\/forest\/?$/, load: () => import("./views/placeholder.js") },
   { name: "wallet", pattern: /^\/wallet\/?$/, load: () => import("./views/placeholder.js") },
@@ -15,12 +15,20 @@ let renderSeq = 0;
 const listeners = new Set();
 
 export function parseHash(hash) {
-  const path = decodeURIComponent((hash || "").replace(/^#/, "")) || "/";
+  const raw = (hash || "").replace(/^#/, "");
+  const [pathPart, queryPart = ""] = raw.split("?");
+  let path;
+  try {
+    path = decodeURIComponent(pathPart) || "/";
+  } catch {
+    path = "/";
+  }
+  const query = new URLSearchParams(queryPart);
   for (const route of ROUTES) {
     const m = path.match(route.pattern);
-    if (m) return { route, params: m.slice(1).filter((p) => p !== undefined) };
+    if (m) return { route, params: m.slice(1).filter((p) => p !== undefined), query };
   }
-  return { route: ROUTES[0], params: [], notFound: true };
+  return { route: ROUTES[0], params: [], query, notFound: true };
 }
 
 export function navigate(path) {
@@ -47,7 +55,7 @@ function highlightNav(name) {
 
 async function render() {
   const seq = ++renderSeq;
-  const { route, params } = parseHash(location.hash);
+  const { route, params, query } = parseHash(location.hash);
   highlightNav(route.name);
   let mod;
   try {
@@ -67,7 +75,7 @@ async function render() {
   cleanup = null;
   outlet.replaceChildren();
   outlet.dataset.view = route.name;
-  cleanup = mod.mount(outlet, params, { route: route.name }) || null;
+  cleanup = mod.mount(outlet, params, { route: route.name, query }) || null;
   for (const fn of listeners) fn(route.name);
 }
 
