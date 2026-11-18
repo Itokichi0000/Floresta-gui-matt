@@ -1,1 +1,65 @@
 /* Per-screen styles. */
+
+/* ----- shared --------------------------------------------------------- */
+.dialog-code {
+  display: block; margin-top: 10px; padding: 8px 10px;
+  background: var(--paper-2); border: 2px solid var(--line); border-radius: 10px;
+  font-size: .82rem; overflow-wrap: anywhere;
+}
+.big-num { font-family: var(--mono); font-weight: 700; font-size: 2.2rem; line-height: 1.1; }
+
+/* ----- peers ---------------------------------------------------------- */
+.peers-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 26px var(--gap); margin-bottom: 26px; }
+.summary-line { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.summary-part { display: flex; flex-direction: column; }
+.summary-label { font-size: .8rem; font-weight: 800; color: var(--text-muted); }
+.summary-sep { font-size: 2rem; font-weight: 800; color: var(--text-muted); line-height: 1.2; }
+.peer-addr { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.utreexo-mark {
+  display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-text);
+  border: 2px solid var(--line);
+}
+.utreexo-mark .icon { width: 14px; height: 14px; }
+.peer-agent { white-space: nowrap; }
+.peers-table .chips { min-width: 150px; }
+.chip-xs { font-size: .68rem; padding: 0 7px; line-height: 1.5; }
+.peer-kind { font-size: .85rem; }
+.peers-table .actions { text-align: right; }
+.disconnect-btn { color: var(--danger); background: var(--danger-bg); }
+.disconnect-label { display: none; }
+
+@media (max-width: 1000px) {
+  .peers-top { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Table becomes cards when it cannot fit. */
+@media (max-width: 1200px) {
+  .peers-table thead { display: none; }
+  .peers-table, .peers-table tbody, .peers-table tr, .peers-table td { display: block; width: 100%; }
+  .peers-table { border-spacing: 0; }
+  .peers-table tbody { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .peers-table tr {
+    margin-bottom: 0; padding: 10px 12px;
+    background: var(--paper-2);
+    border: var(--border-thin) solid var(--line); border-radius: 14px;
+  }
+  .peers-table tr.is-highlight { background: var(--accent-soft); }
+  .peers-table td, .peers-table td:first-child, .peers-table td:last-child {
+    border: 0; border-radius: 0; background: transparent; padding: 3px 0;
+    display: flex; gap: 10px; align-items: center; text-align: left;
+  }
+  .peers-table td[data-label]::before {
+    content: attr(data-label);
+    font-family: var(--font);
+    flex: none; width: 92px;
+    font-size: .74rem; font-weight: 800; color: var(--text-muted);
+  }
+  .peers-table td.num { font-family: var(--mono); }
+  .peer-addr { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+  .peer-agent { white-space: normal; overflow-wrap: anywhere; }
+  .peers-table .actions { justify-content: flex-end; padding-top: 8px; }
+  .disconnect-btn { width: auto; padding: 0 12px; gap: 6px; display: inline-flex; font-weight: 800; }
+  .disconnect-label { display: inline; }
+}

@@ -199,7 +199,7 @@
 
 /* ----- tables ----------------------------------------------------------- */
 
-.table-wrap { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+.table-wrap { position: relative; overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
 .table { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-size: .9rem; }
 .table th {
   text-align: left; font-size: .76rem; font-weight: 800; letter-spacing: .03em;
