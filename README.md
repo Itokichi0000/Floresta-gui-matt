@@ -22,20 +22,73 @@ Utreexo-capable peers are connected, Floresta cannot make progress.
 | **Node unreachable** | **Phone (375 px)** |
 | ![Offline](docs/screenshots/offline.png) | ![Phone](docs/screenshots/home-phone.png) |
 
-## Run
+## Quick start
 
 You need Python 3.10 or newer, and nothing else: no `pip install` and no build step.
 
-```bash
-python3 server/serve.py
+1. Run `florestad` as usual (see Floresta's build guides for
+   [Linux](https://github.com/getfloresta/Floresta/blob/master/doc/build-unix.md)
+   and [macOS](https://github.com/getfloresta/Floresta/blob/master/doc/build-macos.md)).
+   Mainnet takes a while to sync. To try things quickly, use `florestad -n signet`.
+2. Get floresta-ui on the same machine, as a ZIP from GitHub or with git:
+   ```bash
+   git clone https://github.com/Itokichi0000/Floresta-gui-matt floresta-ui
+   ```
+3. Start it:
+   * **macOS:** double-click `start.command` in Finder. The first time, macOS may
+     block it: right-click it, choose **Open**, then confirm.
+   * **Terminal (macOS / Linux):**
+     ```bash
+     ./start.command
+     ```
+     This is the same as `python3 server/serve.py --open`.
+
+The browser opens <http://127.0.0.1:3000>. floresta-ui finds florestad by
+itself on any network (mainnet, signet, testnet, testnet4, regtest) and reads
+its RPC cookie from `~/.floresta`. The terminal says what it found:
+
+```
+floresta-ui 0.1.0
+  UI:        http://127.0.0.1:3000/
+  florestad: http://127.0.0.1:38332 (network: signet, detected automatically)
+  status:    connected (signet, height 271,830 of 271,830)
 ```
 
-Then open <http://127.0.0.1:3000>. The UI finds florestad's RPC cookie in
-`~/.floresta` by itself. For another network:
+### Keep it running (start at login)
 
 ```bash
-FLORESTA_NETWORK=signet python3 server/serve.py
+contrib/install-service.sh
 ```
+
+On macOS this installs a launchd agent, and on Linux a systemd user service.
+floresta-ui then runs in the background and comes back after a reboot.
+Settings you export before running it (for example `FLORESTA_NETWORK=signet`)
+are kept. Remove it with `contrib/install-service.sh --uninstall`.
+
+### Open it from your phone (home network)
+
+The UI only listens on this computer by default. To reach it from a phone on
+the same Wi-Fi, start it with:
+
+```bash
+UI_BIND=0.0.0.0:3000 ./start.command
+```
+
+Then open `http://<computer's IP address>:3000` on the phone. On a Mac, the
+address is in System Settings → Wi-Fi → Details. There is no login yet, so
+only do this on a network you trust. To use a name like `mynode.local`
+instead of the IP address, also set `UI_ALLOWED_HOSTS=mynode.local`.
+
+### Troubleshooting
+
+| You see | What to do |
+|---|---|
+| "Cannot connect to the node" | florestad is not running, or its RPC is not on 127.0.0.1. Start it; the UI reconnects by itself. If florestad listens elsewhere, set `FLORESTAD_URL`. |
+| "florestad rejected the credentials" | The UI cannot read the right cookie. Run it as the same user as florestad. If florestad uses `--data-dir`, set `FLORESTA_DATADIR` to the same folder. With `--rpc-user/--rpc-password`, set `FLORESTA_RPC_USER` / `FLORESTA_RPC_PASSWORD`. |
+| "The sync may have stopped" / Utreexo 0 or 1 | Floresta needs at least two Utreexo-capable peers. Check PARTY. Add one with "Invite a friend", or check that your network allows outgoing connections. |
+| Memory "Not available" | Normal outside macOS and Linux (glibc): florestad reports 0 there. |
+| Block contents never load | Floresta fetches block bodies from peers (up to 30 s). With few peers it can fail; the header is still correct. |
+| `Address already in use` | Something else uses port 3000. Use `UI_BIND=127.0.0.1:3100 ./start.command`. |
 
 ### With Docker
 
@@ -68,13 +121,13 @@ pretend to be syncing (`--ibd`), stuck (`--stalled`), short of Utreexo peers
 
 ## Configuration
 
-Environment variables (or the flags in `python3 server/serve.py --help`):
+Usually nothing needs to be set. Environment variables (or the flags in `python3 server/serve.py --help`):
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `FLORESTAD_URL` | `http://127.0.0.1:<network port>` | florestad's JSON-RPC address |
 | `FLORESTA_DATADIR` | `~/.floresta` | where to find the `.cookie` |
-| `FLORESTA_NETWORK` | `bitcoin` | `signet`, `testnet`, `testnet4` or `regtest` switch the cookie path and the default port (8332, 38332, 18332, 48332, 18442) |
+| `FLORESTA_NETWORK` | detected | `bitcoin`, `signet`, `testnet`, `testnet4` or `regtest`. It sets the cookie path and the default port (8332, 38332, 18332, 48332, 18442). If unset, the network of the running florestad is used. |
 | `FLORESTA_RPC_USER` / `FLORESTA_RPC_PASSWORD` | none | used instead of the cookie when set |
 | `FLORESTA_RPC_COOKIE_FILE` | `<datadir>/[<network>/].cookie` | explicit cookie path |
 | `UI_BIND` | `127.0.0.1:3000` | where the UI listens |
