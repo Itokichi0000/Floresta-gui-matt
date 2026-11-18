@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""floresta-ui server: serves the static UI.
+"""floresta-ui server: serves the static UI and relays JSON-RPC to florestad.
+
+The browser only ever talks to this server (same origin). This server reads
+florestad's .cookie (or a configured user/password), adds the Basic auth
+header and forwards allow-listed RPC methods. Credentials never reach the
+browser, logs or error messages.
 
 Run with:  python3 server/serve.py
 Only the Python standard library is used.
@@ -7,10 +12,16 @@ Only the Python standard library is used.
 
 from __future__ import annotations
 
+import base64
+import http.client
 import ipaddress
 import json
 import mimetypes
+import socket
 import sys
+import threading
+import urllib.error
+import urllib.request
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -19,6 +30,21 @@ from urllib.parse import unquote, urlsplit
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from config import VERSION, Config, ConfigError, load_config  # noqa: E402
+
+# ----- RPC policy (design doc 4.1) -----------------------------------------
+
+READ_METHODS = frozenset({
+    "getblockchaininfo", "getbestblockhash", "getblockcount", "getblockhash",
+    "getblockheader", "getblock", "getpeerinfo", "getconnectioncount",
+    "getnetworkinfo", "getmemoryinfo", "getroots", "uptime", "listdescriptors",
+    "getrpcinfo", "getaddrmaninfo", "getdeploymentinfo",
+})
+WRITE_METHODS = frozenset({"addnode", "disconnectnode", "loaddescriptor", "rescanblockchain"})
+DANGEROUS_METHODS = frozenset({"stop", "sendrawtransaction"})
+
+DEFAULT_TIMEOUT = 10.0
+SLOW_METHOD_TIMEOUTS = {"getblock": 30.0, "rescanblockchain": 30.0}
+MAX_BODY_BYTES = 64 * 1024
 
 CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -76,6 +102,136 @@ def is_ip_literal(host: str) -> bool:
         return False
 
 
+class RelayError(Exception):
+    """An error to report to the browser. Messages never contain secrets."""
+
+    def __init__(self, status: int, code: str, message: str | None = None):
+        super().__init__(code)
+        self.status = status
+        self.code = code
+        self.message = message
+
+
+class Credentials:
+    """Basic auth credentials for florestad.
+
+    Uses FLORESTA_RPC_USER/PASSWORD when set, otherwise the cookie file.
+    The cookie rotates on every florestad restart, so it is re-read when the
+    file changes and whenever florestad answers 401.
+    """
+
+    def __init__(self, config: Config):
+        self.config = config
+        self._lock = threading.Lock()
+        self._cached: str | None = None
+        self._mtime: float | None = None
+
+    @property
+    def mode(self) -> str:
+        return "password" if self.config.uses_password else "cookie"
+
+    def header(self, force_reload: bool = False) -> str | None:
+        """Return the Authorization header value, or None if no credential is available."""
+        value = self._value(force_reload)
+        if value is None:
+            return None
+        return "Basic " + base64.b64encode(value.encode("utf-8")).decode("ascii")
+
+    def _value(self, force_reload: bool) -> str | None:
+        if self.config.uses_password:
+            return f"{self.config.rpc_user or ''}:{self.config.rpc_password}"
+        path = self.config.cookie_path
+        with self._lock:
+            try:
+                mtime = path.stat().st_mtime
+            except OSError:
+                # florestad removes the cookie on shutdown.
+                self._cached, self._mtime = None, None
+                return None
+            if force_reload or self._cached is None or mtime != self._mtime:
+                try:
+                    text = path.read_text(encoding="utf-8").strip()
+                except (OSError, UnicodeDecodeError):
+                    self._cached, self._mtime = None, None
+                    return None
+                self._cached = text if ":" in text else None
+                self._mtime = mtime
+            return self._cached
+
+
+class FlorestadClient:
+    """Forwards one JSON-RPC call to florestad."""
+
+    def __init__(self, config: Config):
+        self.config = config
+        self.credentials = Credentials(config)
+        # Never send node traffic through an HTTP(S)_PROXY from the environment.
+        self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        self._next_id = 0
+        self._id_lock = threading.Lock()
+
+    def _request_id(self) -> int:
+        with self._id_lock:
+            self._next_id += 1
+            return self._next_id
+
+    def _post(self, body: bytes, auth: str | None, timeout: float) -> tuple[int, bytes]:
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        if auth:
+            headers["Authorization"] = auth
+        req = urllib.request.Request(self.config.florestad_url, data=body, headers=headers, method="POST")
+        try:
+            with self._opener.open(req, timeout=timeout) as resp:
+                return resp.status, resp.read()
+        except urllib.error.HTTPError as exc:
+            with exc:
+                return exc.code, exc.read()
+
+    def call(self, method: str, params: list | dict) -> dict:
+        """Return {"result": ..., "error": ...} or raise RelayError."""
+        timeout = SLOW_METHOD_TIMEOUTS.get(method, DEFAULT_TIMEOUT)
+        body = json.dumps(
+            {"jsonrpc": "2.0", "id": self._request_id(), "method": method, "params": params}
+        ).encode("utf-8")
+        try:
+            auth = self.credentials.header()
+            status, raw = self._post(body, auth, timeout)
+            if status == 401 and self.credentials.mode == "cookie":
+                # The cookie may have rotated (florestad restarted): read it again.
+                fresh = self.credentials.header(force_reload=True)
+                if fresh and fresh != auth:
+                    status, raw = self._post(body, fresh, timeout)
+        except (TimeoutError, socket.timeout):
+            raise RelayError(HTTPStatus.GATEWAY_TIMEOUT, "timeout", f"florestad did not answer {method} in {timeout:.0f}s") from None
+        except urllib.error.URLError as exc:
+            if isinstance(exc.reason, (TimeoutError, socket.timeout)):
+                raise RelayError(HTTPStatus.GATEWAY_TIMEOUT, "timeout", f"florestad did not answer {method} in {timeout:.0f}s") from None
+            raise RelayError(HTTPStatus.BAD_GATEWAY, "node_unreachable") from None
+        except (OSError, ValueError, http.client.HTTPException):
+            raise RelayError(HTTPStatus.BAD_GATEWAY, "node_unreachable") from None
+
+        if status == 401:
+            if self.credentials.mode == "cookie":
+                hint = (
+                    f"florestad rejected the request. No usable cookie at {self.config.cookie_path}: "
+                    "check FLORESTA_DATADIR and FLORESTA_NETWORK."
+                    if self.credentials.header() is None
+                    else "florestad rejected the cookie. Check FLORESTA_DATADIR and FLORESTA_NETWORK."
+                )
+            else:
+                hint = "florestad rejected FLORESTA_RPC_USER / FLORESTA_RPC_PASSWORD."
+            raise RelayError(HTTPStatus.BAD_GATEWAY, "auth_failed", hint)
+        if status == 503:
+            raise RelayError(HTTPStatus.SERVICE_UNAVAILABLE, "node_busy", "florestad is busy, try again.")
+        try:
+            doc = json.loads(raw) if raw else None
+        except ValueError:
+            doc = None
+        if not isinstance(doc, dict) or ("result" not in doc and "error" not in doc):
+            raise RelayError(HTTPStatus.BAD_GATEWAY, "bad_response", f"unexpected answer from florestad (HTTP {status})")
+        return {"result": doc.get("result"), "error": doc.get("error")}
+
+
 class UIServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
@@ -83,11 +239,19 @@ class UIServer(ThreadingHTTPServer):
     def __init__(self, config: Config):
         self.config = config
         self.static_root = config.static_dir.resolve()
+        self.client = FlorestadClient(config)
         super().__init__((config.bind_host, config.bind_port), Handler)
 
     @property
     def port(self) -> int:
         return self.server_address[1]
+
+    def handle_error(self, request, client_address) -> None:
+        # A browser closing a tab mid-response is not worth a traceback.
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (BrokenPipeError, ConnectionResetError)):
+            return
+        super().handle_error(request, client_address)
 
     def host_allowed(self, host_header: str | None) -> bool:
         """DNS rebinding guard: only accept names that cannot be rebound.
@@ -107,6 +271,11 @@ class UIServer(ThreadingHTTPServer):
         if host == self.config.bind_host.lower():
             return True
         return host in self.config.allowed_hosts
+
+    def method_allowed(self, method: str) -> bool:
+        if method in READ_METHODS or method in WRITE_METHODS:
+            return True
+        return self.config.allow_dangerous and method in DANGEROUS_METHODS
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -173,7 +342,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         if not self.check_host():
             return
-        self.reject(HTTPStatus.NOT_FOUND, "not_found")
+        if urlsplit(self.path).path != "/api/rpc":
+            self.reject(HTTPStatus.NOT_FOUND, "not_found")
+            return
+        self.handle_rpc()
 
     def _method_not_allowed(self) -> None:
         self.reject(HTTPStatus.METHOD_NOT_ALLOWED, "http_method_not_allowed")
@@ -184,7 +356,79 @@ class Handler(BaseHTTPRequestHandler):
 
     def info(self) -> dict:
         cfg = self.server.config
-        return {"name": "floresta-ui", "version": VERSION, "network": cfg.network}
+        return {
+            "name": "floresta-ui",
+            "version": VERSION,
+            "network": cfg.network,
+            "allow_dangerous": cfg.allow_dangerous,
+            "methods": {
+                "read": sorted(READ_METHODS),
+                "write": sorted(WRITE_METHODS),
+                "dangerous": sorted(DANGEROUS_METHODS) if cfg.allow_dangerous else [],
+            },
+        }
+
+    def from_browser(self) -> bool:
+        """Browsers always send at least one of these on a cross-site POST."""
+        return any(self.headers.get(h) for h in ("Origin", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Referer"))
+
+    def check_origin(self) -> bool:
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        parts = urlsplit(origin)
+        host = (self.headers.get("Host") or "").lower()
+        if origin == "null" or parts.scheme not in ("http", "https") or parts.netloc.lower() != host:
+            self.reject(HTTPStatus.FORBIDDEN, "origin_not_allowed")
+            return False
+        return True
+
+    def handle_rpc(self) -> None:
+        if not self.check_origin():
+            return
+        content_type = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        # CSRF guard: a page on another site can only send "simple" content
+        # types without a preflight, so browsers must say application/json.
+        # Command-line tools (curl) send none of the browser headers.
+        if content_type != "application/json" and self.from_browser():
+            self.reject(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, "unsupported_media_type", "Use Content-Type: application/json.")
+            return
+        try:
+            length = int(self.headers.get("Content-Length") or "")
+        except ValueError:
+            self.close_connection = True
+            self.send_json(HTTPStatus.LENGTH_REQUIRED, {"error": "length_required"}, {"Connection": "close"})
+            return
+        if length < 0 or length > MAX_BODY_BYTES:
+            # The body is left unread, so this connection cannot be reused.
+            self.close_connection = True
+            self.send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "body_too_large"}, {"Connection": "close"})
+            return
+        raw = self.rfile.read(length)
+        try:
+            req = json.loads(raw)
+        except (ValueError, UnicodeDecodeError):
+            self.reject(HTTPStatus.BAD_REQUEST, "bad_request", "Body must be JSON.")
+            return
+        if not isinstance(req, dict) or not isinstance(req.get("method"), str):
+            self.reject(HTTPStatus.BAD_REQUEST, "bad_request", 'Expected {"method": "...", "params": [...]}.')
+            return
+        method = req["method"]
+        params = req.get("params", [])
+        if params is None:
+            params = []
+        if not isinstance(params, (list, dict)):
+            self.reject(HTTPStatus.BAD_REQUEST, "bad_request", "params must be an array.")
+            return
+        if not self.server.method_allowed(method):
+            self.reject(HTTPStatus.FORBIDDEN, "method_not_allowed")
+            return
+        try:
+            payload = self.server.client.call(method, params)
+        except RelayError as exc:
+            self.reject(exc.status, exc.code, exc.message)
+            return
+        self.send_json(HTTPStatus.OK, payload)
 
     def serve_static(self, url_path: str) -> None:
         rel = unquote(url_path).lstrip("/") or "index.html"
@@ -215,6 +459,13 @@ def print_banner(config: Config, port: int) -> None:
     out = sys.stderr
     out.write(f"floresta-ui {VERSION}\n")
     out.write(f"  UI:        http://{config.bind_display.rsplit(':', 1)[0]}:{port}/\n")
+    out.write(f"  florestad: {config.florestad_url} (network: {config.network})\n")
+    if config.uses_password:
+        out.write("  auth:      FLORESTA_RPC_USER / FLORESTA_RPC_PASSWORD\n")
+    else:
+        out.write(f"  auth:      cookie at {config.cookie_path}\n")
+    if config.allow_dangerous:
+        out.write("  WARNING:   --allow-dangerous: stop and sendrawtransaction are relayed.\n")
     if not config.is_loopback:
         out.write(
             "  WARNING:   listening on a non-loopback address. Anyone who can reach this\n"
