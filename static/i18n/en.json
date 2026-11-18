@@ -187,5 +187,6 @@
   "forest.copyAll": "Copy all",
   "forest.copyRoot": "Copy root #{i}",
   "forest.rootAria": "Root {i}: {hash}",
-  "forest.empty": "The accumulator is empty."
+  "forest.empty": "The accumulator is empty.",
+  "controls.language": "Language"
 }

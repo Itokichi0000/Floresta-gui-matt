@@ -176,3 +176,7 @@ b, strong, h1, h2, h3, h4 { font-weight: 800; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+@media (max-width: 760px) {
+  .status-actions .segmented button { padding: 7px 8px; }
+}
