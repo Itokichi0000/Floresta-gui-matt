@@ -1,0 +1,6 @@
+.git
+docs
+tmp
+**/__pycache__
+*.md
+!static/**/*.md

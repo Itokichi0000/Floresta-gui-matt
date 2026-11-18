@@ -3,7 +3,7 @@ import { h, icon } from "../dom.js";
 import { formatNumber } from "../format.js";
 import { t } from "../i18n.js";
 import { rpc } from "../rpc.js";
-import { countUtreexo, MIN_UTREEXO_PEERS, peerUtreexo } from "../node.js";
+import { countUtreexo, MIN_UTREEXO_PEERS, peerUtreexo, serviceNames } from "../node.js";
 import { refresh, subscribe } from "../store.js";
 import { confirmDialog, errorText, pageHead, toast, windowTab } from "../ui.js";
 
@@ -47,7 +47,7 @@ const SHORT_NAMES = {
 };
 
 function serviceChips(peer) {
-  const names = Array.isArray(peer.servicesnames) ? [...peer.servicesnames] : [];
+  const names = [...serviceNames(peer)];
   const flags = peerUtreexo(peer);
   if (flags.utreexo && !names.some((n) => n.startsWith("UTREEXO"))) names.push("UTREEXO");
   if (flags.archive && !names.includes("UTREEXO_ARCHIVE")) names.push("UTREEXO_ARCHIVE");

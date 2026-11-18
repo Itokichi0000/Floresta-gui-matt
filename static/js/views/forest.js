@@ -54,6 +54,8 @@ export function mount(root) {
   const rootsEl = h("span", { class: "big-num" }, "—");
   const compare = h("p", { class: "forest-compare" });
   const asOf = h("p", { class: "note forest-asof" });
+  // Only some florestad versions report the number of leaves (leaf_count).
+  const leavesNote = h("p", { class: "note", hidden: true });
   const scene = h("div", { class: "forest-scene" });
   const list = h("ol", { class: "root-list", start: 0 });
   const copyAllSlot = h("span", { class: "window-actions" });
@@ -72,7 +74,7 @@ export function mount(root) {
           h("div", { class: "hero-times", "aria-hidden": "true" }, "× 32 B ="),
           h("div", { class: "hero-num" }, bytesEl)),
         compare),
-      asOf),
+      asOf, leavesNote),
     h("section", { class: "window forest-window" },
       windowTab("FOREST", "もり"),
       scene,
@@ -112,6 +114,9 @@ export function mount(root) {
         t("forest.asOf", { height: formatNumber(s.chain.blocks) }), " ",
         hashView(s.chain.bestblockhash, { href: `#/block/${s.chain.bestblockhash}`, head: 10, tail: 10 }));
     }
+    const leaves = s.chain?.leaf_count;
+    leavesNote.hidden = leaves === undefined;
+    if (leaves !== undefined) leavesNote.textContent = t("forest.leaves", { n: formatNumber(leaves) });
     if (key === lastKey) return;
     lastKey = key;
     status.hidden = true;

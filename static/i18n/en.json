@@ -112,7 +112,7 @@
   "block.search.invalid": "Enter a block height (a number) or a 64-character block hash.",
   "block.genesis": "Genesis",
   "block.tip": "Tip",
-  "block.confirmations": "{n} confirmations",
+  "block.confirmations": "Confirmations: {n}",
   "block.hash": "Hash",
   "block.time": "Time",
   "block.mediantime": "Median time",
@@ -190,5 +190,6 @@
   "forest.empty": "The accumulator is empty.",
   "controls.language": "Language",
   "controls.toLight": "Switch to the sunny forest (light)",
-  "controls.toDark": "Switch to the night forest (dark)"
+  "controls.toDark": "Switch to the night forest (dark)",
+  "forest.leaves": "This node also reports {n} leaves (coins) in the forest (leaf_count)."
 }

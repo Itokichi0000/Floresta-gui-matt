@@ -3,7 +3,9 @@ import { h, icon } from "../dom.js";
 import { formatBytes, formatDateTime, formatNumber, timeAgo } from "../format.js";
 import { t } from "../i18n.js";
 import { navigate } from "../router.js";
+import { normalizeHeader } from "../node.js";
 import { rpc } from "../rpc.js";
+import { getState } from "../store.js";
 import { copyButton, errorText, hashView, pageHead, windowTab } from "../ui.js";
 
 const HASH_RE = /^[0-9a-fA-F]{64}$/;
@@ -62,6 +64,10 @@ export function mount(root, params) {
   }
 
   function renderNav(header) {
+    if (header.height === undefined) {
+      nav.replaceChildren();
+      return;
+    }
     const prev = header.height > 0
       ? h("a", { class: "btn btn-ghost", href: `#/block/${header.height - 1}`, rel: "prev" }, icon("chevron-left"), `Lv. ${formatNumber(header.height - 1)}`)
       : h("span", { class: "btn btn-ghost", "aria-disabled": "true" }, icon("chevron-left"), t("block.genesis"));
@@ -156,8 +162,14 @@ export function mount(root, params) {
       else hash = await rpc("getblockhash", [target.height]);
       if (!alive) return;
       // The header is local and fast; show it right away.
-      const hd = await rpc("getblockheader", [hash, true]);
+      const tip = getState().chain?.headers;
+      const hd = normalizeHeader(await rpc("getblockheader", [hash, true]), { height: target?.height, tip });
       if (!alive) return;
+      // Old releases do not link to the next block: look it up by height.
+      if (hd.legacy && hd.height !== undefined && !hd.nextblockhash && (tip === undefined || hd.height < tip)) {
+        hd.nextblockhash = await rpc("getblockhash", [hd.height + 1]).catch(() => undefined);
+        if (!alive) return;
+      }
       renderNav(hd);
       renderHeader(hash, hd);
       loadBody(hash);

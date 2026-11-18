@@ -676,6 +676,7 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Fake florestad for floresta-ui development.")
     p.add_argument("--network", default="signet")
     p.add_argument("--port", type=int, help="RPC port (default: the network's florestad port)")
+    p.add_argument("--host", default="127.0.0.1", help="address to listen on (default 127.0.0.1)")
     p.add_argument("--datadir", default=str(Path(__file__).resolve().parent.parent / "tmp" / "mock-floresta"),
                    help="where to write the cookie (default: ./tmp/mock-floresta)")
     p.add_argument("--rpc-user")
@@ -701,9 +702,10 @@ def main(argv=None) -> int:
     )
     port = args.port or NETWORKS[network].rpc_port
     datadir = Path(args.datadir).expanduser().resolve()
-    server = MockFlorestad(MockNode(options), datadir, port=port, rpc_user=args.rpc_user, rpc_password=args.rpc_password)
+    server = MockFlorestad(MockNode(options), datadir, port=port, host=args.host,
+                           rpc_user=args.rpc_user, rpc_password=args.rpc_password)
     server.verbose = args.verbose
-    sys.stderr.write(f"mock florestad ({network}) listening on 127.0.0.1:{server.port}\n")
+    sys.stderr.write(f"mock florestad ({network}) listening on {args.host}:{server.port}\n")
     if not args.rpc_password:
         sys.stderr.write(f"cookie written to {server.cookie_path}\n")
     sys.stderr.write(

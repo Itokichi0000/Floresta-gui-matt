@@ -1,5 +1,6 @@
 // Polls the node every 5 seconds (paused while the tab is hidden) and shares
 // the latest snapshot with the status bar and the views.
+import { normalizeChainInfo } from "./node.js";
 import { rpcAll } from "./rpc.js";
 
 const INTERVAL_MS = 5000;
@@ -71,7 +72,7 @@ async function poll() {
   const now = Date.now();
   state.status = "online";
   state.error = null;
-  state.chain = r.chain.value;
+  state.chain = normalizeChainInfo(r.chain.value);
   if (state.height !== state.chain.blocks) {
     state.height = state.chain.blocks;
     state.heightSince = now;

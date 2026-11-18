@@ -112,7 +112,7 @@
   "block.search.invalid": "ブロックの高さ（数字）か、64文字のブロックハッシュを入力してください。",
   "block.genesis": "ジェネシス",
   "block.tip": "最新",
-  "block.confirmations": "{n} 承認",
+  "block.confirmations": "承認数：{n}",
   "block.hash": "ハッシュ",
   "block.time": "時刻",
   "block.mediantime": "中央値時刻",
@@ -190,5 +190,6 @@
   "forest.empty": "アキュムレータは空です。",
   "controls.language": "言語",
   "controls.toLight": "昼の森（ライト）に切り替え",
-  "controls.toDark": "夜の森（ダーク）に切り替え"
+  "controls.toDark": "夜の森（ダーク）に切り替え",
+  "forest.leaves": "このノードは森の葉（コイン）の数も報告しています：{n}（leaf_count）"
 }
