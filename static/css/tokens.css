@@ -1,0 +1,74 @@
+/* Design tokens — "Anime RPG" (design doc, chapter 8).
+   Light = sunny forest, dark = night forest. Flat colors only:
+   no gradients, no blurred shadows. */
+
+:root {
+  color-scheme: light;
+
+  /* palette */
+  --c-leaf: #EAF7E3;        /* page background (young leaf) */
+  --c-ink: #24442F;         /* lines and text (deep green) */
+  --c-green: #5CBF6A;       /* main */
+  --c-green-deep: #1F4D30;  /* dialogue window */
+  --c-gold: #FFD66B;        /* buttons, name plates */
+  --c-pink: #FFD1DC;        /* second accent */
+  --c-orange: #F7931A;      /* bitty */
+
+  /* roles */
+  --bg: var(--c-leaf);
+  --bg-dot: #D2EDC5;
+  --text: var(--c-ink);
+  --text-muted: #44624E;
+  --line: var(--c-ink);
+  --shadow-color: var(--c-ink);
+  --paper: #FFFFFF;
+  --paper-2: #F4FBF0;
+  --paper-3: #E1F3D9;
+  --accent: var(--c-green);
+  --accent-soft: #D3F0D6;
+  --accent-text: var(--c-ink);
+  --button: var(--c-gold);
+  --button-text: var(--c-ink);
+  --plate: var(--c-gold);
+  --pink: var(--c-pink);
+  --orange: var(--c-orange);
+  --dialog-bg: var(--c-green-deep);
+  --dialog-text: #FFFFFF;
+  --dialog-muted: #CDE8D3;
+  --danger: #A3242F;
+  --danger-bg: #FFE0E6;
+  --warn-bg: #FFF1C7;
+  --ok: #1E7A34;
+  --link: #1D6B34;
+  --focus: #1F6FEB;
+
+  /* stage */
+  --sky: #C9EEF7;
+  --sky-2: #E3F7FB;
+  --cloud: #FFFFFF;
+  --hill-back: #A6DE98;
+  --hill-front: #74C977;
+  --ground: #5CBF6A;
+  --trunk: #8A5A3B;
+  --canopy: #3FA651;
+  --canopy-2: #5CBF6A;
+
+  /* shape */
+  --border: 3px;
+  --border-thin: 2.5px;
+  --radius-s: 14px;
+  --radius-m: 20px;
+  --radius-l: 26px;
+  --shadow: 0 5px 0 var(--shadow-color);
+  --shadow-s: 0 3px 0 var(--shadow-color);
+
+  /* type */
+  --font: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* layout */
+  --sidebar-w: 220px;
+  --gap: 20px;
+
+  --dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='3' cy='3' r='2' fill='%23D2EDC5'/%3E%3Ccircle cx='14' cy='14' r='2' fill='%23D2EDC5'/%3E%3C/svg%3E");
+}

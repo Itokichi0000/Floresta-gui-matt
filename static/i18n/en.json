@@ -1,0 +1,18 @@
+{
+  "a11y.skip": "Skip to content",
+  "nav.aria": "Main",
+  "nav.home.tip": "Dashboard: sync progress and node stats",
+  "nav.peers.tip": "Peers (getpeerinfo, addnode)",
+  "nav.forest.tip": "Utreexo forest (getroots)",
+  "nav.wallet.tip": "Watch-only wallet descriptors",
+  "nav.block.tip": "Block explorer",
+  "status.aria": "Node status",
+  "status.network.tip": "Network (chain)",
+  "status.height.tip": "Level = validated block height (blocks)",
+  "conn.unknown": "Connecting…",
+  "conn.online": "Online",
+  "conn.offline": "Offline",
+  "common.ok": "OK",
+  "common.cancel": "Cancel",
+  "placeholder.body": "This screen is coming soon."
+}
