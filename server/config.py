@@ -7,7 +7,7 @@ over environment variables. Only the Python standard library is used.
 |-------------------------|--------------------|----------------------------------|
 | FLORESTAD_URL           | --florestad-url    | http://127.0.0.1:<network port>  |
 | FLORESTA_DATADIR        | --datadir          | ~/.floresta                      |
-| FLORESTA_NETWORK        | --network          | bitcoin                          |
+| FLORESTA_NETWORK        | --network          | auto-detected, else bitcoin      |
 | FLORESTA_RPC_USER       | --rpc-user         | (none)                           |
 | FLORESTA_RPC_PASSWORD   | (env only)         | (none)                           |
 | FLORESTA_RPC_COOKIE_FILE| --cookie-file      | <datadir>/[<net>/].cookie        |
@@ -114,21 +114,31 @@ class Config:
     allow_dangerous: bool = False
     static_dir: Path = DEFAULT_STATIC_DIR
     quiet: bool = False
+    # True when neither FLORESTA_NETWORK nor FLORESTAD_URL was given: the
+    # server then looks for a running florestad on any network.
+    auto_network: bool = False
+    open_browser: bool = False
 
     @property
     def cookie_path(self) -> Path:
-        if self.cookie_file is not None:
-            path = self.cookie_file.expanduser()
-            if not path.is_absolute():
-                path = self.network_dir / path
-            return path
-        return self.network_dir / ".cookie"
+        return self.cookie_path_for(self.network)
 
     @property
     def network_dir(self) -> Path:
-        subdir = NETWORKS[self.network].subdir
+        return self.network_dir_for(self.network)
+
+    def network_dir_for(self, network: str) -> Path:
+        subdir = NETWORKS[network].subdir
         base = self.datadir.expanduser()
         return base / subdir if subdir else base
+
+    def cookie_path_for(self, network: str) -> Path:
+        if self.cookie_file is not None:
+            path = self.cookie_file.expanduser()
+            if not path.is_absolute():
+                path = self.network_dir_for(network) / path
+            return path
+        return self.network_dir_for(network) / ".cookie"
 
     @property
     def uses_password(self) -> bool:
@@ -174,6 +184,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--static-dir", help=argparse.SUPPRESS)
     parser.add_argument("--quiet", action="store_true", help="do not log every request")
+    parser.add_argument("--open", action="store_true", help="open the UI in the default browser after starting")
     return parser
 
 
@@ -187,8 +198,10 @@ def load_config(argv: Sequence[str] | None = None, env: Mapping[str, str] | None
         value = env.get(env_name)
         return value if value not in (None, "") else None
 
-    network = normalize_network(pick(args.network, "FLORESTA_NETWORK") or "bitcoin")
+    network_text = pick(args.network, "FLORESTA_NETWORK")
+    network = normalize_network(network_text or "bitcoin")
     florestad_url = pick(args.florestad_url, "FLORESTAD_URL")
+    auto_network = network_text is None and florestad_url is None
     if florestad_url is None:
         florestad_url = f"http://127.0.0.1:{NETWORKS[network].rpc_port}"
     if not florestad_url.startswith(("http://", "https://")):
@@ -221,4 +234,6 @@ def load_config(argv: Sequence[str] | None = None, env: Mapping[str, str] | None
         allow_dangerous=allow_dangerous,
         static_dir=Path(args.static_dir).resolve() if args.static_dir else DEFAULT_STATIC_DIR,
         quiet=bool(args.quiet),
+        auto_network=auto_network,
+        open_browser=bool(args.open),
     )

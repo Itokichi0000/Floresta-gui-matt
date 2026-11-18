@@ -328,6 +328,39 @@ class TimeoutTests(unittest.TestCase):
         self.assertEqual(body["error"], "timeout")
 
 
+class AutoNetworkTests(unittest.TestCase):
+    """Without FLORESTA_NETWORK / FLORESTAD_URL the server finds the running node."""
+
+    def test_detects_network_from_listening_port_and_cookie(self):
+        port = 18442  # regtest's default RPC port
+        with socket.socket() as s:
+            if s.connect_ex(("127.0.0.1", port)) == 0:
+                self.skipTest("port 18442 is in use")
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        mock = start_mock(Path(tmp.name), MockOptions(network="regtest", getblock_delay=0.0), port=port)
+        self.addCleanup(mock.shutdown_and_cleanup)
+        config = load_config(["--quiet"], env={"FLORESTA_DATADIR": tmp.name, "UI_BIND": "127.0.0.1:0"})
+        self.assertTrue(config.auto_network)
+        self.assertEqual(config.network, "bitcoin")
+        ui = UIServer(config)
+        threading.Thread(target=ui.serve_forever, daemon=True).start()
+        self.addCleanup(ui.server_close)
+        self.addCleanup(ui.shutdown)
+        ui.client.detect_network(force=True)
+        self.assertEqual(config.network, "regtest")
+        self.assertEqual(config.florestad_url, f"http://127.0.0.1:{port}")
+        self.assertEqual(config.cookie_path, Path(tmp.name) / "regtest" / ".cookie")
+        result = ui.client.call("getblockcount", [])
+        self.assertIsInstance(result["result"], int)
+
+    def test_explicit_network_disables_detection(self):
+        config = load_config([], env={"FLORESTA_NETWORK": "signet"})
+        self.assertFalse(config.auto_network)
+        config = load_config([], env={"FLORESTAD_URL": "http://127.0.0.1:9999"})
+        self.assertFalse(config.auto_network)
+
+
 class MockNodeTests(unittest.TestCase):
     """Sanity checks that the mock behaves like Floresta's documented RPCs."""
 
