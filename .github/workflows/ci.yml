@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Server and relay tests (stdlib unittest, mock florestad)
+        run: python -m unittest discover -s server -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: JS syntax
+        run: for f in $(find static/js -name '*.js'); do node --check "$f"; done
+      - name: JS unit tests
+        run: node --test tests/js/*.test.mjs
+      - name: HTML check
+        run: npx --yes html-validate@9.5.0 static/index.html
+      - name: Translations have the same keys
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          en = set(json.load(open("static/i18n/en.json")))
+          ja = set(json.load(open("static/i18n/ja.json")))
+          if en != ja:
+              print("missing in ja:", sorted(en - ja))
+              print("missing in en:", sorted(ja - en))
+              sys.exit(1)
+          EOF
