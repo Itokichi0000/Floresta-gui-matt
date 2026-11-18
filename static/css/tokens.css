@@ -1,0 +1,149 @@
+/* Design tokens — "Anime RPG" (design doc, chapter 8).
+   Light = sunny forest, dark = night forest. Flat colors only:
+   no gradients, no blurred shadows. */
+
+:root {
+  color-scheme: light;
+
+  /* palette */
+  --c-leaf: #EAF7E3;        /* page background (young leaf) */
+  --c-ink: #24442F;         /* lines and text (deep green) */
+  --c-green: #5CBF6A;       /* main */
+  --c-green-deep: #1F4D30;  /* dialogue window */
+  --c-gold: #FFD66B;        /* buttons, name plates */
+  --c-pink: #FFD1DC;        /* second accent */
+  --c-orange: #F7931A;      /* bitty */
+
+  /* roles */
+  --bg: var(--c-leaf);
+  --bg-dot: #D2EDC5;
+  --text: var(--c-ink);
+  --text-muted: #44624E;
+  --line: var(--c-ink);
+  --shadow-color: var(--c-ink);
+  --paper: #FFFFFF;
+  --paper-2: #F4FBF0;
+  --paper-3: #E1F3D9;
+  --accent: var(--c-green);
+  --accent-soft: #D3F0D6;
+  --accent-text: var(--c-ink);
+  --button: var(--c-gold);
+  --button-text: var(--c-ink);
+  --plate: var(--c-gold);
+  --pink: var(--c-pink);
+  --orange: var(--c-orange);
+  --dialog-bg: var(--c-green-deep);
+  --dialog-text: #FFFFFF;
+  --dialog-muted: #CDE8D3;
+  --danger: #A3242F;
+  --danger-bg: #FFE0E6;
+  --warn-bg: #FFF1C7;
+  --ok: #1E7A34;
+  --link: #1D6B34;
+  --focus: #1F6FEB;
+
+  /* stage */
+  --sky: #C9EEF7;
+  --sky-2: #E3F7FB;
+  --cloud: #FFFFFF;
+  --hill-back: #A6DE98;
+  --hill-front: #74C977;
+  --ground: #5CBF6A;
+  --trunk: #8A5A3B;
+  --canopy: #3FA651;
+  --canopy-2: #5CBF6A;
+
+  /* shape */
+  --border: 3px;
+  --border-thin: 2.5px;
+  --radius-s: 14px;
+  --radius-m: 20px;
+  --radius-l: 26px;
+  --shadow: 0 5px 0 var(--shadow-color);
+  --shadow-s: 0 3px 0 var(--shadow-color);
+
+  /* type */
+  --font: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* layout */
+  --sidebar-w: 220px;
+  --gap: 20px;
+
+  --dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='3' cy='3' r='2' fill='%23D2EDC5'/%3E%3Ccircle cx='14' cy='14' r='2' fill='%23D2EDC5'/%3E%3C/svg%3E");
+}
+
+/* ----- night forest (dark mode) ---------------------------------------
+   Follows the OS setting unless the user picked a theme with the toggle. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  color-scheme: dark;
+  --bg: #0E2129;
+  --bg-dot: #23434A;
+  --text: #E8F6EB;
+  --text-muted: #A8C8B1;
+  --line: #7CC98C;
+  --shadow-color: #040D10;
+  --paper: #15303A;
+  --paper-2: #1A3A44;
+  --paper-3: #23474F;
+  --accent: #5CBF6A;
+  --accent-soft: #1D4A3B;
+  --accent-text: #0D2315;
+  --button: #FFD66B;
+  --button-text: #24442F;
+  --plate: #FFD66B;
+  --dialog-bg: #0A2619;
+  --dialog-text: #FFFFFF;
+  --dialog-muted: #BFE2C7;
+  --danger: #FFA3B1;
+  --danger-bg: #4A2232;
+  --warn-bg: #3F3A1A;
+  --ok: #8FE39D;
+  --link: #9FE6AC;
+  --focus: #8AB8FF;
+  --sky: #152A47;
+  --cloud: #2A4364;
+  --hill-back: #1D4A3B;
+  --hill-front: #276A47;
+  --trunk: #6E4B34;
+  --canopy: #2E7D45;
+  --canopy-2: #3F9C57;
+  --dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='6' cy='6' r='1.6' fill='%23355A60'/%3E%3Ccircle cx='28' cy='26' r='1.2' fill='%23FFF3B0' fill-opacity='.45'/%3E%3Ccircle cx='38' cy='8' r='1' fill='%23355A60'/%3E%3C/svg%3E");
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0E2129;
+  --bg-dot: #23434A;
+  --text: #E8F6EB;
+  --text-muted: #A8C8B1;
+  --line: #7CC98C;
+  --shadow-color: #040D10;
+  --paper: #15303A;
+  --paper-2: #1A3A44;
+  --paper-3: #23474F;
+  --accent: #5CBF6A;
+  --accent-soft: #1D4A3B;
+  --accent-text: #0D2315;
+  --button: #FFD66B;
+  --button-text: #24442F;
+  --plate: #FFD66B;
+  --dialog-bg: #0A2619;
+  --dialog-text: #FFFFFF;
+  --dialog-muted: #BFE2C7;
+  --danger: #FFA3B1;
+  --danger-bg: #4A2232;
+  --warn-bg: #3F3A1A;
+  --ok: #8FE39D;
+  --link: #9FE6AC;
+  --focus: #8AB8FF;
+  --sky: #152A47;
+  --cloud: #2A4364;
+  --hill-back: #1D4A3B;
+  --hill-front: #276A47;
+  --trunk: #6E4B34;
+  --canopy: #2E7D45;
+  --canopy-2: #3F9C57;
+  --dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='6' cy='6' r='1.6' fill='%23355A60'/%3E%3Ccircle cx='28' cy='26' r='1.2' fill='%23FFF3B0' fill-opacity='.45'/%3E%3Ccircle cx='38' cy='8' r='1' fill='%23355A60'/%3E%3C/svg%3E");
+}

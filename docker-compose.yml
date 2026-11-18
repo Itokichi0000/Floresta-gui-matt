@@ -1,0 +1,60 @@
+# florestad + floresta-ui.
+#
+#   docker compose up                          # mainnet
+#   FLORESTA_NETWORK=signet docker compose up  # signet (syncs in minutes)
+#   docker compose --profile demo up ui-demo   # UI against the mock node, no sync needed
+#
+# The UI is published on http://127.0.0.1:3000 only. florestad's RPC is not
+# published at all: only the UI container talks to it.
+services:
+  florestad:
+    image: ${FLORESTA_IMAGE:-dlsz/floresta:latest}
+    command: >-
+      florestad --data-dir /data/.floresta
+      -n ${FLORESTA_NETWORK:-bitcoin}
+      --rpc-address 0.0.0.0:8332
+    volumes:
+      - floresta_data:/data/.floresta
+    restart: unless-stopped
+
+  ui:
+    build: .
+    environment:
+      FLORESTAD_URL: http://florestad:8332
+      FLORESTA_NETWORK: ${FLORESTA_NETWORK:-bitcoin}
+      FLORESTA_DATADIR: /data/.floresta
+    volumes:
+      # Read-only, to find florestad's .cookie (it changes on every restart).
+      - floresta_data:/data/.floresta:ro
+    ports:
+      - "127.0.0.1:${UI_PORT:-3000}:3000"
+    depends_on:
+      - florestad
+    restart: unless-stopped
+
+  # Demo: the mock florestad from server/mock_florestad.py, for trying the UI
+  # without syncing a chain.
+  mock:
+    profiles: ["demo"]
+    build: .
+    command: python3 server/mock_florestad.py --network signet --host 0.0.0.0 --port 38332 --datadir /data/mock
+    volumes:
+      - mock_data:/data/mock
+
+  ui-demo:
+    profiles: ["demo"]
+    build: .
+    environment:
+      FLORESTAD_URL: http://mock:38332
+      FLORESTA_NETWORK: signet
+      FLORESTA_DATADIR: /data/mock
+    volumes:
+      - mock_data:/data/mock:ro
+    ports:
+      - "127.0.0.1:${UI_DEMO_PORT:-3001}:3000"
+    depends_on:
+      - mock
+
+volumes:
+  floresta_data:
+  mock_data:

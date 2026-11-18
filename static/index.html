@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Floresta UI</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/fonts/fonts.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/stage.css">
+  <link rel="stylesheet" href="css/views.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="a11y.skip">Skip to content</a>
+
+  <div class="app">
+    <header class="statusbar">
+      <a class="brand" href="#/" aria-label="Floresta UI">
+        <img class="brand-mark" src="assets/favicon.svg" alt="" width="34" height="34">
+        <span class="brand-name">Floresta</span>
+        <span class="brand-sub">UI</span>
+      </a>
+
+      <ul class="status-items" data-i18n-aria="status.aria">
+        <li class="status-item" data-i18n-title="status.network.tip">
+          <span class="status-label">NET</span>
+          <span id="sb-network" class="status-value">—</span>
+        </li>
+        <li class="status-item" data-i18n-title="status.height.tip">
+          <span class="status-label">Lv.</span>
+          <span id="sb-height" class="status-value mono">—</span>
+        </li>
+        <li class="status-item status-conn">
+          <span id="sb-conn" class="conn" data-state="unknown">
+            <span class="conn-dot" aria-hidden="true"></span>
+            <span class="conn-text" data-i18n="conn.unknown">Connecting…</span>
+          </span>
+        </li>
+      </ul>
+
+      <div class="status-actions" id="status-actions"></div>
+    </header>
+
+    <nav class="sidebar" data-i18n-aria="nav.aria">
+      <a class="nav-link" href="#/" data-route="dashboard" data-i18n-title="nav.home.tip">
+        <svg class="icon" aria-hidden="true"><use href="vendor/lucide/sprite.svg#house"></use></svg>
+        <span class="nav-text"><span class="nav-title">HOME</span><span class="nav-kana" lang="ja">ホーム</span></span>
+      </a>
+      <a class="nav-link" href="#/peers" data-route="peers" data-i18n-title="nav.peers.tip">
+        <svg class="icon" aria-hidden="true"><use href="vendor/lucide/sprite.svg#users"></use></svg>
+        <span class="nav-text"><span class="nav-title">PARTY</span><span class="nav-kana" lang="ja">パーティ</span></span>
+      </a>
+      <a class="nav-link" href="#/forest" data-route="forest" data-i18n-title="nav.forest.tip">
+        <svg class="icon" aria-hidden="true"><use href="vendor/lucide/sprite.svg#trees"></use></svg>
+        <span class="nav-text"><span class="nav-title">FOREST MAP</span><span class="nav-kana" lang="ja">フォレストマップ</span></span>
+      </a>
+      <a class="nav-link" href="#/wallet" data-route="wallet" data-i18n-title="nav.wallet.tip">
+        <svg class="icon" aria-hidden="true"><use href="vendor/lucide/sprite.svg#wallet"></use></svg>
+        <span class="nav-text"><span class="nav-title">WALLET</span><span class="nav-kana" lang="ja">ウォレット</span></span>
+      </a>
+      <a class="nav-link" href="#/block" data-route="block" data-i18n-title="nav.block.tip">
+        <svg class="icon" aria-hidden="true"><use href="vendor/lucide/sprite.svg#box"></use></svg>
+        <span class="nav-text"><span class="nav-title">BLOCKS</span><span class="nav-kana" lang="ja">ブロック</span></span>
+      </a>
+    </nav>
+
+    <main id="main" class="view" tabindex="-1"></main>
+  </div>
+
+  <dialog id="confirm-dialog" class="dialog" aria-labelledby="confirm-title">
+    <form method="dialog" class="dialog-inner">
+      <h2 id="confirm-title" class="dialog-title">Confirm</h2>
+      <p id="confirm-body" class="dialog-body"></p>
+      <div class="dialog-actions">
+        <button type="submit" value="cancel" class="btn btn-ghost" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" value="ok" class="btn" id="confirm-ok" data-i18n="common.ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+</body>
+</html>
